@@ -10,13 +10,14 @@ const AdminDashboard = () => {
     const navigate = useNavigate();
 
     // 🔐 Role-based protection
-    useEffect(() => {
-        const role = localStorage.getItem("userRole");
-        if (role !== "admin") {
-            alert("Unauthorized access! Please login as Admin.");
-            navigate("/login");
-        }
-    }, [navigate]);
+   useEffect(() => {
+  const role = localStorage.getItem("userRole");
+  if (role !== "admin" && role !== "chief_warden") {
+    alert("Unauthorized access! Please login as Admin.");
+    navigate("/login");
+  }
+}, [navigate]);
+
 
     // 🔍 Compute counts
     const total = complaints.length;

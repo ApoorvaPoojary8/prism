@@ -12,10 +12,10 @@ const ManageWardens = () => {
   ]);
   const [newWarden, setNewWarden] = useState({ name: "", email: "", hostel: "" });
 
-  // ✅ Role protection
+  // ✅ Role protection (Admin + Chief Warden)
   useEffect(() => {
     const role = localStorage.getItem("userRole");
-    if (role !== "admin") {
+    if (role !== "admin" && role !== "chief_warden") {
       alert("Unauthorized access! Please login as Admin.");
       navigate("/login");
     }

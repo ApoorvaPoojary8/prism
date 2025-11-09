@@ -12,13 +12,14 @@ const ManageStudents = () => {
     ]);
     const [newStudent, setNewStudent] = useState({ name: "", email: "", hostel: "" });
 
-    useEffect(() => {
-        const role = localStorage.getItem("userRole");
-        if (role !== "admin") {
-            alert("Unauthorized access! Please login as Admin.");
-            navigate("/login");
-        }
-    }, [navigate]);
+ useEffect(() => {
+  const role = localStorage.getItem("userRole");
+  if (role !== "admin" && role !== "chief_warden") {
+    alert("Unauthorized access! Please login as Admin.");
+    navigate("/login");
+  }
+}, [navigate]);
+
 
     const handleAdd = () => {
         if (!newStudent.name || !newStudent.email || !newStudent.hostel) {

@@ -4,79 +4,83 @@ import { ComplaintContext } from "../../context/ComplaintContext";
 import "../../Dashboard.css";
 
 const RaiseComplaint = () => {
-    const { addComplaint } = useContext(ComplaintContext);
-    const [title, setTitle] = useState("");
-    const [description, setDescription] = useState("");
-    const [file, setFile] = useState(null);
+  const { addComplaint } = useContext(ComplaintContext);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [file, setFile] = useState(null);
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
+  // ✅ Proper complaint submission function
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-        if (!title || !description) {
-            alert("Please fill in all fields.");
-            return;
-        }
+    if (!title || !description) {
+      alert("Please fill in all fields.");
+      return;
+    }
 
-        const newComplaint = {
-            id: Date.now(), // ✅ Unique ID for each complaint
-            title,
-            description,
-            status: "Pending",
-            role: "student",
-            date: new Date().toLocaleDateString("en-IN"), // ✅ Store current date
-        };
+    try {
+      // Send only valid fields to backend
+      await addComplaint({
+        title,
+        description,
+        category: "General", // optional
+        image_url: null, // optional, backend accepts null
+      });
 
-        addComplaint(newComplaint);
-        alert("Complaint submitted successfully!");
-        setTitle("");
-        setDescription("");
-    };
+      alert("Complaint submitted successfully!");
+      setTitle("");
+      setDescription("");
+      setFile(null);
+    } catch (err) {
+      console.error("❌ Error submitting complaint:", err);
+      alert("Server error while submitting complaint.");
+    }
+  };
 
+  return (
+    <div className="dashboard-container">
+      <Sidebar role="student" />
+      <div className="main-content">
+        <h1 className="page-title">Raise Complaint</h1>
+        <div className="complaint-form-card">
+          <form onSubmit={handleSubmit}>
+            <label>Complaint Title</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter title"
+              required
+            />
 
-    return (
-        <div className="dashboard-container">
-            <Sidebar role="student" />
-            <div className="main-content">
-                <h1 className="page-title">Raise Complaint</h1>
-                <div className="complaint-form-card">
-                    <form onSubmit={handleSubmit}>
-                        <label>Complaint Title</label>
-                        <input
-                            type="text"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            placeholder="Enter title"
-                            required
-                        />
+            <label>Description</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={5}
+              placeholder="Describe problem"
+              required
+            />
 
-                        <label>Description</label>
-                        <textarea
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            rows={5}
-                            placeholder="Describe problem"
-                            required
-                        />
-
-                        <label>Attach File (optional)</label>
-                        <div className="file-input-wrapper">
-                            <button type="button" className="file-btn">
-                                {file ? file.name : "Choose File"}
-                            </button>
-                            <input
-                                type="file"
-                                onChange={(e) => setFile(e.target.files[0])}
-                            />
-                        </div>
-
-                        <button type="submit" className="primary-btn">
-                            Submit Complaint
-                        </button>
-                    </form>
-                </div>
+            <label>Attach File (optional)</label>
+            <div className="file-input-wrapper">
+              <button type="button" className="file-btn">
+                {file ? file.name : "Choose File"}
+              </button>
+              <input
+                type="file"
+                onChange={(e) => setFile(e.target.files[0])}
+              />
             </div>
+
+            <button type="submit" className="primary-btn">
+              Submit Complaint
+            </button>
+          </form>
         </div>
-    );
+      </div>
+    </div>
+  );
 };
 
 export default RaiseComplaint;

@@ -1,6 +1,7 @@
 import React from "react";
 import "../Dashboard.css";
 
+
 const ComplaintTable = ({ complaints = [], role, onStatusChange }) => {
     const formatDate = (d) => {
         if (!d) return "—";
@@ -8,13 +9,20 @@ const ComplaintTable = ({ complaints = [], role, onStatusChange }) => {
         return isNaN(dt.getTime()) ? "—" : dt.toLocaleDateString("en-IN");
     };
 
+
     return (
         <div className="complaint-table">
             <table>
                 <thead>
                     <tr>
-                        <th>ID</th><th>Title</th><th>Description</th><th>Date</th><th>Status</th>
+
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Date</th>
+                        <th>Status</th>
                         {role === "warden" && <th>Action</th>}
+
                     </tr>
                 </thead>
                 <tbody>

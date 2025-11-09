@@ -5,10 +5,14 @@ const Sidebar = ({ role }) => {
     const navigate = useNavigate();
 
     const handleLogout = () => {
+
+
         // ✅ Clear stored login/session info
         localStorage.removeItem("userRole");
         localStorage.removeItem("isLoggedIn");
 
+
+        
         // ✅ Redirect to login page
         navigate("/login");
     };
