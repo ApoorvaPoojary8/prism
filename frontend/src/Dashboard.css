@@ -217,6 +217,17 @@ html {
     outline: none;
     transition: all 0.3s ease;
 }
+.complaint-form-card input[type="text"],
+.complaint-form-card textarea {
+  color: #000; /* ✅ visible text color */
+  background-color: #fff; /* ✅ ensure solid white field */
+}
+
+.complaint-form-card input::placeholder,
+.complaint-form-card textarea::placeholder {
+  color: #666; /* ✅ make placeholder text slightly gray */
+}
+
 
 .complaint-form-card input[type="text"]:focus,
 .complaint-form-card textarea:focus {

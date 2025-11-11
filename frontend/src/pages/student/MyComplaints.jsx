@@ -1,25 +1,64 @@
 // MyComplaints.jsx
-import React, { useContext, useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import Sidebar from "../../components/Sidebar";
-import { ComplaintContext } from "../../context/ComplaintContext";
 import "../../Dashboard.css";
 
 const MyComplaints = () => {
-  const { complaints, updateComplaint } = useContext(ComplaintContext);
+  const [complaints, setComplaints] = useState([]);
   const [feedbackText, setFeedbackText] = useState({});
+  const token = localStorage.getItem("token");
 
-  const handleFeedbackSubmit = (id) => {
+  // ✅ Fetch complaints securely for the current logged-in student
+  useEffect(() => {
+    if (!token) {
+      alert("Please log in again.");
+      window.location.href = "/login";
+      return;
+    }
+
+    axios
+      .get("http://localhost:5000/api/complaints/my", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        console.log("✅ My complaints fetched:", res.data);
+        setComplaints(res.data);
+      })
+      .catch((err) => {
+        console.error("❌ Error fetching complaints:", err);
+        alert("Error fetching complaints. Please try again.");
+      });
+  }, [token]);
+
+  // ✅ Handle feedback submission
+  const handleFeedbackSubmit = async (id) => {
     if (!feedbackText[id] || feedbackText[id].trim() === "") {
       alert("Please enter feedback before submitting.");
       return;
     }
 
-    updateComplaint(id, { feedback: feedbackText[id] });
-    alert("Feedback submitted successfully!");
-    setFeedbackText((prev) => ({ ...prev, [id]: "" }));
-  };
+    try {
+      await axios.put(
+        `http://localhost:5000/api/complaints/${id}`,
+        { feedback: feedbackText[id] },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-  const studentComplaints = complaints.filter((c) => c.role === "student" || c.id);
+      alert("Feedback submitted successfully!");
+
+      // Refresh complaints after submitting feedback
+      const res = await axios.get("http://localhost:5000/api/complaints/my", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setComplaints(res.data);
+
+      setFeedbackText((prev) => ({ ...prev, [id]: "" }));
+    } catch (error) {
+      console.error("❌ Error submitting feedback:", error);
+      alert("Failed to submit feedback.");
+    }
+  };
 
   return (
     <div className="dashboard-container">
@@ -27,7 +66,7 @@ const MyComplaints = () => {
       <div className="main-content">
         <h2>My Complaints</h2>
 
-        {studentComplaints.length > 0 ? (
+        {complaints.length > 0 ? (
           <div className="complaint-table">
             <table>
               <thead>
@@ -40,9 +79,8 @@ const MyComplaints = () => {
                 </tr>
               </thead>
               <tbody>
-                {studentComplaints.map((c) => (
+                {complaints.map((c) => (
                   <tr key={c.id}>
-                    {/* ✅ Fixed Date Display */}
                     <td>
                       {c.created_at
                         ? new Date(c.created_at).toLocaleString("en-IN", {
@@ -51,7 +89,6 @@ const MyComplaints = () => {
                           })
                         : "—"}
                     </td>
-
                     <td>{c.title}</td>
                     <td>{c.description}</td>
                     <td

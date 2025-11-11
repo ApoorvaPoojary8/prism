@@ -118,3 +118,20 @@
         transform: translateY(0);
     }
 }
+
+.auth-switch {
+    margin-top: 15px;
+    font-size: 14px;
+    color: #333;
+}
+
+.auth-link {
+    color: #007bff;
+    font-weight: bold;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.auth-link:hover {
+    color: #0056b3;
+}

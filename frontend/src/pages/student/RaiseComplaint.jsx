@@ -1,3 +1,4 @@
+// ✅ src/pages/student/RaiseComplaint.jsx
 import React, { useState, useContext } from "react";
 import Sidebar from "../../components/Sidebar";
 import { ComplaintContext } from "../../context/ComplaintContext";
@@ -19,15 +20,14 @@ const RaiseComplaint = () => {
     }
 
     try {
-      // Send only valid fields to backend
       await addComplaint({
         title,
         description,
-        category: "General", // optional
-        image_url: null, // optional, backend accepts null
+        category: "General",
+        image_url: null,
       });
 
-      alert("Complaint submitted successfully!");
+      alert("✅ Complaint submitted successfully!");
       setTitle("");
       setDescription("");
       setFile(null);
@@ -58,7 +58,7 @@ const RaiseComplaint = () => {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={5}
-              placeholder="Describe problem"
+              placeholder="Describe the issue"
               required
             />
 

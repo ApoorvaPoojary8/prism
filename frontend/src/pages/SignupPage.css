@@ -1,0 +1,122 @@
+/* 🌤 Overall Container */
+.signup-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: linear-gradient(135deg, #dce6ff, #cbd8ff, #f1f4ff);
+  font-family: "Poppins", sans-serif;
+  animation: fadeIn 0.8s ease-in-out;
+}
+
+/* 💳 Card Style */
+.signup-card {
+  background: #ffffff;
+  padding: 3rem 2.5rem;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  width: 400px;
+  text-align: center;
+  transition: all 0.3s ease-in-out;
+  border: 1px solid #b9c5e2;
+}
+
+.signup-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+}
+
+/* 🏷️ Title */
+.signup-title {
+  margin-bottom: 1.8rem;
+  color: #3a4d91;
+  font-size: 1.9rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* 📋 Form Layout */
+.signup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+/* 🧾 Inputs & Dropdowns */
+.signup-form input,
+.signup-form select {
+  padding: 12px;
+  border: 2px solid #c0c8e0;
+  border-radius: 12px;
+  font-size: 1rem;
+  outline: none;
+  transition: all 0.3s ease;
+  background-color: #f8faff;
+  color: #2b3551;
+}
+
+.signup-form input:focus,
+.signup-form select:focus {
+  border-color: #5a7ce8;
+  background-color: #ffffff;
+  box-shadow: 0 0 8px rgba(90, 124, 232, 0.3);
+}
+
+/* 🔘 Button */
+.signup-form button {
+  background: linear-gradient(135deg, #5a7ce8, #7a9df9);
+  color: #ffffff;
+  padding: 13px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.signup-form button:hover {
+  background: linear-gradient(135deg, #4868cc, #6a8cf0);
+  transform: scale(1.04);
+}
+
+/* 🔁 Login link */
+.auth-switch {
+  margin-top: 15px;
+  font-size: 14px;
+  color: #333;
+}
+
+.auth-link {
+  color: #007bff;
+  font-weight: bold;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.auth-link:hover {
+  color: #0056b3;
+}
+
+/* ✨ Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 📱 Responsive */
+@media (max-width: 480px) {
+  .signup-card {
+    width: 90%;
+    padding: 2rem;
+  }
+  .signup-title {
+    font-size: 1.6rem;
+  }
+}

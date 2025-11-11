@@ -7,6 +7,7 @@ const LoginPageWithOTP = () => {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
+  const [usn, setUsn] = useState("");
   const [role, setRole] = useState("");
   const [block, setBlock] = useState("");
   const [room, setRoom] = useState("");
@@ -14,31 +15,39 @@ const LoginPageWithOTP = () => {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // =========================================
-  // STEP 1️⃣ : SEND OTP
-  // =========================================
+  const hostelBlocks = ["4G", "2G", "3G", "NANDINI", "5B", "6G"];
+
+  const generateRoomNumbers = () => {
+    const rooms = [];
+    for (let floor = 0; floor <= 3; floor++) {
+      for (let i = 1; i <= 16; i++) {
+        rooms.push(`${floor}${i.toString().padStart(2, "0")}`);
+      }
+    }
+    return rooms;
+  };
+  const roomNumbers = generateRoomNumbers();
+
+  /* ======================================================
+     ✅ STEP 1: SEND OTP
+  ====================================================== */
   const handleSendOtp = async () => {
     if (!email || !role) {
       alert("Please enter your email and select a role.");
       return;
     }
 
-    if (role === "student" && (!block || !room)) {
-      alert("Please enter your hostel block and room number.");
+    if (role === "student" && (!usn || !block || !room)) {
+      alert("Please fill all student details (USN, Block, Room).");
       return;
     }
 
     try {
       setLoading(true);
 
-      let finalRole = role.toLowerCase().trim();
-      if (finalRole === "chief" || finalRole === "chiefwarden") {
-        finalRole = "chief_warden";
-      }
-
       const res = await axios.post("http://localhost:5000/api/auth/send-otp", {
         email,
-        role: finalRole,
+        role,
       });
 
       if (res.data.message === "OTP sent to email") {
@@ -55,9 +64,9 @@ const LoginPageWithOTP = () => {
     }
   };
 
-  // =========================================
-  // STEP 2️⃣ : VERIFY OTP
-  // =========================================
+  /* ======================================================
+     ✅ STEP 2: VERIFY OTP
+  ====================================================== */
   const handleVerifyOtp = async () => {
     if (!otp) {
       alert("Please enter your OTP.");
@@ -66,53 +75,63 @@ const LoginPageWithOTP = () => {
 
     try {
       setLoading(true);
+
       const res = await axios.post("http://localhost:5000/api/auth/verify-otp", {
         email,
         otp,
+        usn,
+        block,
+        room,
       });
 
       if (res.data.token) {
         alert("✅ Login successful!");
 
-// Only remove old login data safely
-localStorage.removeItem("token");
-localStorage.removeItem("userRole");
-localStorage.removeItem("userEmail");
-localStorage.removeItem("userName");
+        // ✅ Step 1: Safely clear previous user data
+        localStorage.removeItem("token");
+        localStorage.removeItem("userRole");
+        localStorage.removeItem("userEmail");
+        localStorage.removeItem("loggedInUser");
+        localStorage.removeItem("studentUSN");
+        localStorage.removeItem("studentBlock");
+        localStorage.removeItem("studentRoom");
 
-
+        // ✅ Step 2: Store new login info
         const userRole = res.data.user.role.toLowerCase();
+
+        const loggedInUser = {
+          name: res.data.user.name || email.split("@")[0],
+          email: res.data.user.email,
+          role: userRole,
+          usn: usn || "N/A",
+          block: block || "N/A",
+          room: room || "N/A",
+        };
 
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("userRole", userRole);
         localStorage.setItem("userEmail", res.data.user.email);
-        localStorage.setItem("userName", res.data.user.name);
-        localStorage.setItem(
-          "loggedInUser",
-          JSON.stringify({
-            name: res.data.user.name,
-            email: res.data.user.email,
-            role: userRole,
-            block,
-            room,
-          })
-        );
+        localStorage.setItem("loggedInUser", JSON.stringify(loggedInUser));
 
-        console.log("🔍 Logged-in role:", userRole);
+        console.log("✅ Saved new user data:", loggedInUser);
 
+        // ✅ Step 3: Redirect to correct dashboard and refresh
         if (userRole === "student") {
+          localStorage.setItem("studentUSN", usn);
           localStorage.setItem("studentBlock", block);
           localStorage.setItem("studentRoom", room);
           navigate("/student/dashboard", { replace: true });
-       } else if (userRole === "warden") {
-  navigate("/warden/dashboard", { replace: true });
-} else if (userRole === "chief_warden" || userRole === "admin") {
-  navigate("/admin/dashboard", { replace: true });
-} else {
-  alert("Unauthorized role or invalid credentials.");
-  navigate("/login", { replace: true });
-}
-
+          window.location.reload(); // ✅ refresh so ComplaintContext picks up token
+        } else if (userRole === "warden") {
+          navigate("/warden/dashboard", { replace: true });
+          window.location.reload();
+        } else if (userRole === "chief_warden" || userRole === "admin") {
+          navigate("/admin/dashboard", { replace: true });
+          window.location.reload();
+        } else {
+          alert("Unauthorized role or invalid credentials.");
+          navigate("/login", { replace: true });
+        }
       } else {
         alert("Invalid OTP or user not found.");
       }
@@ -124,9 +143,9 @@ localStorage.removeItem("userName");
     }
   };
 
-  // =========================================
-  // UI
-  // =========================================
+  /* ======================================================
+     🖥️ RENDER
+  ====================================================== */
   return (
     <div className="otp-container">
       <div className="otp-card">
@@ -152,22 +171,45 @@ localStorage.removeItem("userName");
               <>
                 <input
                   type="text"
-                  placeholder="Enter Hostel Block (e.g. A, B, C)"
-                  value={block}
-                  onChange={(e) => setBlock(e.target.value)}
+                  placeholder="Enter your USN"
+                  value={usn}
+                  onChange={(e) => setUsn(e.target.value)}
                 />
-                <input
-                  type="text"
-                  placeholder="Enter Room Number"
-                  value={room}
-                  onChange={(e) => setRoom(e.target.value)}
-                />
+
+                <select value={block} onChange={(e) => setBlock(e.target.value)}>
+                  <option value="">Select Hostel Block</option>
+                  {hostelBlocks.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                </select>
+
+                <select value={room} onChange={(e) => setRoom(e.target.value)}>
+                  <option value="">Select Room Number</option>
+                  {roomNumbers.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
               </>
             )}
 
             <button onClick={handleSendOtp} disabled={loading}>
               {loading ? "Sending OTP..." : "Send OTP"}
             </button>
+
+            <p className="auth-switch">
+              New user?{" "}
+              <span
+                className="auth-link"
+                onClick={() => navigate("/signup")}
+                style={{ cursor: "pointer" }}
+              >
+                Sign Up
+              </span>
+            </p>
           </div>
         ) : (
           <div className="otp-form">
