@@ -72,6 +72,21 @@ export const ComplaintProvider = ({ children }) => {
       console.error("❌ Error updating complaint:", err);
     }
   };
+  // 🔹 Add student feedback to resolved complaint
+const addFeedback = async (id, feedback) => {
+  try {
+    await axios.put(
+      `http://localhost:5000/api/complaints/${id}`,
+      { feedback },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    await fetchComplaints();
+  } catch (err) {
+    console.error("❌ Error submitting feedback:", err);
+    alert("Server error while submitting feedback.");
+  }
+};
+
 
   // 🔹 Fetch whenever token or role changes
   useEffect(() => {
@@ -94,6 +109,7 @@ export const ComplaintProvider = ({ children }) => {
         fetchComplaints,
         addComplaint,
         updateComplaint,
+        addFeedback,
         clearComplaints,
       }}
     >

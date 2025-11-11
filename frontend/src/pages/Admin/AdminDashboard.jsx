@@ -6,58 +6,63 @@ import { ComplaintContext } from "../../context/ComplaintContext";
 import "../../Dashboard.css";
 
 const AdminDashboard = () => {
-    const { complaints } = useContext(ComplaintContext);
-    const navigate = useNavigate();
-
-    // 🔐 Role-based protection
-   useEffect(() => {
+  const { complaints, fetchComplaints } = useContext(ComplaintContext);
+  const navigate = useNavigate();
   const role = localStorage.getItem("userRole");
-  if (role !== "admin" && role !== "chief_warden") {
-    alert("Unauthorized access! Please login as Admin.");
-    navigate("/login");
-  }
-}, [navigate]);
+  const token = localStorage.getItem("token");
 
+  // 🔐 Role-based protection
+  useEffect(() => {
+    if (!token || (role !== "admin" && role !== "chief_warden")) {
+      alert("Unauthorized access! Please login as Admin.");
+      navigate("/login");
+      return;
+    }
+    fetchComplaints();
+  }, [token, role]);
 
-    // 🔍 Compute counts
-    const total = complaints.length;
-    const pending = complaints.filter((c) => c.status === "Pending").length;
-    const resolved = complaints.filter((c) => c.status === "Resolved").length;
+  // ✅ Use created_at instead of date
+  const total = complaints.length;
+  const pending = complaints.filter(
+    (c) => c.status?.toLowerCase() === "pending"
+  ).length;
+  const resolved = complaints.filter(
+    (c) => c.status?.toLowerCase() === "resolved"
+  ).length;
 
-    // ⏰ Escalate complaints older than 3 days
-    const now = new Date();
-    const escalated = complaints.filter((c) => {
-        if (c.status === "Resolved" || !c.date) return false;
-        const diffDays = (now - new Date(c.date)) / (1000 * 60 * 60 * 24);
-        return diffDays > 3; // complaints pending for more than 3 days
-    });
+  const now = new Date();
+  const escalated = complaints.filter((c) => {
+    if (c.status?.toLowerCase() === "resolved" || !c.created_at) return false;
+    const diffDays = (now - new Date(c.created_at)) / (1000 * 60 * 60 * 24);
+    return diffDays > 3;
+  });
 
-    return (
-        <div className="dashboard-container">
-            <Sidebar role="admin" />
-            <div className="main-content">
-                <div className="top-bar">
-                    <h2>Admin Dashboard</h2>
-                </div>
-
-                <div className="cards">
-                    <DashboardCard title="Total Complaints" count={total} color="#3b82f6" />
-                    <DashboardCard title="Pending" count={pending} color="#facc15" />
-                    <DashboardCard title="Resolved" count={resolved} color="#22c55e" />
-                    <DashboardCard
-                        title="Escalated (Unresolved)"
-                        count={escalated.length}
-                        color="#ef4444"
-                    />
-                </div>
-
-                <p style={{ marginTop: "20px" }}>
-                    <strong>Note:</strong> Complaints pending for more than 3 days are automatically
-                    escalated. View them under <b>“Unresolved Complaints”</b> page.
-                </p>
-            </div>
+  return (
+    <div className="dashboard-container">
+      <Sidebar role="admin" />
+      <div className="main-content">
+        <div className="top-bar">
+          <h2>Admin Dashboard</h2>
         </div>
-    );
+
+        <div className="cards">
+          <DashboardCard title="Total Complaints" count={total} color="#3b82f6" />
+          <DashboardCard title="Pending" count={pending} color="#facc15" />
+          <DashboardCard title="Resolved" count={resolved} color="#22c55e" />
+          <DashboardCard
+            title="Escalated (Unresolved)"
+            count={escalated.length}
+            color="#ef4444"
+          />
+        </div>
+
+        <p style={{ marginTop: "20px" }}>
+          <strong>Note:</strong> Complaints pending for more than 3 days are automatically
+          escalated. View them under <b>“Unresolved Complaints”</b>.
+        </p>
+      </div>
+    </div>
+  );
 };
 
 export default AdminDashboard;

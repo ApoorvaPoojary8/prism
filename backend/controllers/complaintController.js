@@ -6,7 +6,6 @@ import { sendMail } from "../utils/mailer.js";
 ===================================================== */
 export const createComplaint = async (req, res) => {
   try {
-    // ✅ Ensure token decoded user exists
     if (!req.user || !req.user.id) {
       console.warn("🚨 Missing user info in request (token issue)");
       return res.status(401).json({ message: "Unauthorized or invalid token" });
@@ -19,16 +18,14 @@ export const createComplaint = async (req, res) => {
       return res.status(400).json({ message: "Title and description are required." });
     }
 
-    console.log(`🧩 Complaint creation request by user ${user_id}:`, { title, description });
-
     const [result] = await pool.query(
       "INSERT INTO complaints (user_id, title, description) VALUES (?, ?, ?)",
       [user_id, title, description]
     );
 
     const [rows] = await pool.query("SELECT * FROM complaints WHERE id = ?", [result.insertId]);
-
     console.log(`✅ Complaint #${result.insertId} created by user_id=${user_id}`);
+
     return res.status(201).json(rows[0]);
   } catch (err) {
     console.error("❌ Error creating complaint:", err);
@@ -46,7 +43,6 @@ export const getMyComplaints = async (req, res) => {
     }
 
     const user_id = req.user.id;
-
     const [rows] = await pool.query(
       "SELECT * FROM complaints WHERE user_id = ? ORDER BY created_at DESC",
       [user_id]
@@ -61,7 +57,7 @@ export const getMyComplaints = async (req, res) => {
 };
 
 /* =====================================================
-   📍 3. GET ALL COMPLAINTS (Role Based)
+   📍 3. GET ALL COMPLAINTS (Role Based + Show Only Unresolved ≥ 3 Days for Admin)
 ===================================================== */
 export const getAllComplaints = async (req, res) => {
   try {
@@ -76,54 +72,79 @@ export const getAllComplaints = async (req, res) => {
     let values = [];
 
     if (role === "student") {
+      // 🎓 Student — only their own complaints
       query = `
-        SELECT c.*, u.name AS student_name, u.email AS student_email
+        SELECT 
+          c.*, 
+          u.name AS student_name, 
+          u.email AS student_email,
+          TIMESTAMPDIFF(DAY, c.created_at, NOW()) AS pending_days
         FROM complaints c
         JOIN users u ON c.user_id = u.id
         WHERE c.user_id = ?
         ORDER BY c.created_at DESC
       `;
       values = [userId];
-    } else if (role === "warden") {
+    }
+
+    else if (role === "warden") {
+      // 🧑‍🏫 Warden — sees all complaints
       query = `
-        SELECT c.*, u.name AS student_name, u.email AS student_email
+        SELECT 
+          c.*, 
+          u.name AS student_name, 
+          u.email AS student_email,
+          TIMESTAMPDIFF(DAY, c.created_at, NOW()) AS pending_days
         FROM complaints c
         JOIN users u ON c.user_id = u.id
         ORDER BY c.created_at DESC
       `;
-    } else if (role === "chief_warden" || role === "admin") {
+    }
+
+    else if (role === "chief_warden" || role === "admin") {
+      // 🧑‍💼 Admin / Chief Warden — only unresolved complaints ≥ 3 days old
       query = `
-        SELECT c.*, u.name AS student_name, u.email AS student_email
+        SELECT 
+          c.*, 
+          u.name AS student_name, 
+          u.email AS student_email,
+          TIMESTAMPDIFF(DAY, c.created_at, NOW()) AS pending_days
         FROM complaints c
         JOIN users u ON c.user_id = u.id
-        WHERE c.status = 'Pending'
-        AND TIMESTAMPDIFF(DAY, c.created_at, NOW()) > 3
+        WHERE c.status != 'resolved'
+          AND TIMESTAMPDIFF(DAY, c.created_at, NOW()) >= 3
         ORDER BY c.created_at DESC
       `;
-    } else {
+    }
+
+    else {
       return res.status(403).json({ message: "Unauthorized role" });
     }
 
     const [rows] = await pool.query(query, values);
 
-    // 🔹 Auto mark as "Escalated" for complaints older than 3 days
-    const now = new Date();
+    // 🔹 Optional: auto-mark pending complaints as escalated (for admin visibility)
     for (const c of rows) {
-      if (c.status === "Pending" && c.created_at) {
-        const diffDays = (now - new Date(c.created_at)) / (1000 * 60 * 60 * 24);
-        if (diffDays > 3) {
-          await pool.query("UPDATE complaints SET status = 'Escalated' WHERE id = ?", [c.id]);
-        }
+      if (c.status === "pending" && c.pending_days >= 3) {
+        await pool.query(
+          "UPDATE complaints SET status = 'escalated' WHERE id = ?",
+          [c.id]
+        );
+        c.status = "escalated"; // reflect in memory too
       }
     }
 
-    console.log(`📦 Role=${role} retrieved ${rows.length} complaints`);
+    console.log(`📦 Role=${role} retrieved ${rows.length} unresolved complaints (≥3 days old)`);
     return res.json(rows);
+
   } catch (err) {
     console.error("❌ Error fetching all complaints:", err);
     return res.status(500).json({ message: "Server error while fetching complaints." });
   }
 };
+
+
+
 
 /* =====================================================
    📍 4. UPDATE STATUS (Warden/Admin)
@@ -131,10 +152,20 @@ export const getAllComplaints = async (req, res) => {
 export const updateComplaintStatus = async (req, res) => {
   try {
     const complaintId = req.params.id;
-    const { status, remark } = req.body;
+    const { status, remark, feedback } = req.body;
+    const userRole = req.user?.role;
 
+    // ✅ Student adds feedback
+    if (userRole === "student" && feedback) {
+      await pool.query("UPDATE complaints SET feedback = ? WHERE id = ?", [feedback, complaintId]);
+      const [[updated]] = await pool.query("SELECT * FROM complaints WHERE id = ?", [complaintId]);
+      console.log(`💬 Feedback added for complaint #${complaintId}`);
+      return res.json(updated);
+    }
+
+    // ✅ Warden or admin updates status/remark
     await pool.query("UPDATE complaints SET status = ?, remark = ? WHERE id = ?", [
-      status || "Pending",
+      status || "pending",
       remark || null,
       complaintId,
     ]);
@@ -145,23 +176,24 @@ export const updateComplaintStatus = async (req, res) => {
       [complaintId]
     );
 
-    // ✅ Send notification if resolved
-    if (status === "Resolved") {
+    // ✅ Notify student if resolved
+    if (status === "resolved") {
       const subject = `Your complaint #${updated.id} has been resolved`;
       const html = `
         <p>Hi ${updated.student_name},</p>
         <p>Your complaint "<b>${updated.title}</b>" has been marked <b>Resolved</b>.</p>
         <p><b>Remark:</b> ${remark || "—"}</p>
+        <p>Please login and submit your feedback.</p>
         <p>Thank you,<br/>PRISM Team</p>
       `;
       try {
         await sendMail({ to: updated.student_email, subject, html });
       } catch (mailErr) {
-        console.error("Mail send error:", mailErr);
+        console.error("📧 Mail send error:", mailErr);
       }
     }
 
-    console.log(`✅ Complaint #${complaintId} updated to status=${status}`);
+    console.log(`✅ Complaint #${complaintId} updated (status=${status || "—"})`);
     const [rows] = await pool.query("SELECT * FROM complaints WHERE id = ?", [complaintId]);
     return res.json(rows[0]);
   } catch (err) {
